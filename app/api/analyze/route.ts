@@ -137,11 +137,15 @@ const ANALYSIS_SCHEMA = {
 };
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { propertyData, strategies } = body as {
-    propertyData: PropertyData;
-    strategies: StrategyInputs[];
-  };
+  let propertyData: PropertyData;
+  let strategies: StrategyInputs[];
+  try {
+    const body = await req.json();
+    propertyData = body.propertyData;
+    strategies = body.strategies;
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
   if (!propertyData || !strategies?.length) {
     return NextResponse.json(
@@ -151,6 +155,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('[analyze] ANTHROPIC_API_KEY is not set');
     return NextResponse.json(
       { error: 'ANTHROPIC_API_KEY is not configured. Add it to .env.local.' },
       { status: 500 }
@@ -240,6 +245,7 @@ Analyze each strategy and return the complete JSON analysis.`;
           }
         }
       } catch (err) {
+        console.error('[analyze] Stream error:', err);
         const message =
           err instanceof Error ? err.message : 'Unknown error during analysis';
         controller.enqueue(

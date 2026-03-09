@@ -13,13 +13,20 @@ interface StreamEvent {
 }
 
 export async function POST(req: NextRequest) {
-  const { address } = await req.json();
+  let address: string;
+  try {
+    const body = await req.json();
+    address = body.address;
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
   if (!address || typeof address !== 'string') {
     return NextResponse.json({ error: 'address is required' }, { status: 400 });
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('[research] ANTHROPIC_API_KEY is not set');
     return NextResponse.json(
       { error: 'ANTHROPIC_API_KEY is not configured. Add it to .env.local.' },
       { status: 500 }
@@ -69,7 +76,7 @@ Use null for any field you could not find data for. The researchSummary should b
               content: `Research this property address and return the JSON data: ${address}`,
             },
           ],
-          tools: [{ type: 'web_search_20260209', name: 'web_search' }],
+          tools: [{ type: 'web_search_20260209' }],
         };
 
         const response = (client.messages as unknown as {
@@ -128,6 +135,7 @@ Use null for any field you could not find data for. The researchSummary should b
           }
         }
       } catch (err) {
+        console.error('[research] Stream error:', err);
         const message =
           err instanceof Error ? err.message : 'Unknown error during research';
         controller.enqueue(
