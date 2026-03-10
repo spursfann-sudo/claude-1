@@ -176,8 +176,8 @@ function AnalyzePage() {
           <PropertyForm initial={propertyData} onConfirm={handlePropertyConfirm} />
         )}
 
-        {step === 'strategy' && (
-          <StrategySelector onSubmit={handleStrategiesSubmit} />
+        {step === 'strategy' && propertyData && (
+          <StrategySelector propertyData={propertyData} onSubmit={handleStrategiesSubmit} />
         )}
 
         {step === 'analyzing' && (
