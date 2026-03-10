@@ -239,6 +239,8 @@ ${JSON.stringify(ANALYSIS_SCHEMA, null, 2)}`;
           message = 'Rate limit reached. Please wait a minute and try again.';
         } else if (message.includes('authentication_error')) {
           message = 'Invalid API key. Please check your ANTHROPIC_API_KEY configuration.';
+        } else if (message.includes('not_found_error')) {
+          message = 'Model not available. Please check your API plan supports the required models.';
         }
         controller.enqueue(
           encoder.encode(JSON.stringify({ type: 'error', message }) + '\n')
