@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 
 interface Props {
@@ -8,28 +8,25 @@ interface Props {
   loading?: boolean;
 }
 
+const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+let mapsInitialized = false;
+
 export default function AddressForm({ onSubmit, loading }: Props) {
   const [address, setAddress] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  const handlePlaceChanged = useCallback(() => {
-    const place = autocompleteRef.current?.getPlace();
-    if (place?.formatted_address) {
-      setAddress(place.formatted_address);
-    }
-  }, []);
-
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey || !inputRef.current) return;
 
-    let mounted = true;
-
-    setOptions({ key: apiKey });
+    // Ensure setOptions is called exactly once
+    if (!mapsInitialized) {
+      setOptions({ key: apiKey });
+      mapsInitialized = true;
+    }
 
     importLibrary('places').then((placesLib) => {
-      if (!mounted || !inputRef.current) return;
+      if (!inputRef.current) return;
 
       const ac = new placesLib.Autocomplete(inputRef.current, {
         types: ['address'],
@@ -38,15 +35,16 @@ export default function AddressForm({ onSubmit, loading }: Props) {
       });
 
       autocompleteRef.current = ac;
-      ac.addListener('place_changed', handlePlaceChanged);
+      ac.addListener('place_changed', () => {
+        const place = ac.getPlace();
+        if (place?.formatted_address) {
+          setAddress(place.formatted_address);
+        }
+      });
     }).catch((err) => {
       console.warn('Google Places Autocomplete failed to load:', err);
     });
-
-    return () => {
-      mounted = false;
-    };
-  }, [handlePlaceChanged]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
