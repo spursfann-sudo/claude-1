@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 4 });
 
   const systemPrompt = `You are an expert real estate investment analyst with deep knowledge of all major investment strategies including BRRRR, fix & flip, turnkey rentals, short-term rentals, buy & hold, and wholesaling.
 
@@ -233,8 +233,13 @@ ${JSON.stringify(ANALYSIS_SCHEMA, null, 2)}`;
         }
       } catch (err) {
         console.error('[analyze] Stream error:', err);
-        const message =
+        let message =
           err instanceof Error ? err.message : 'Unknown error during analysis';
+        if (message.includes('rate_limit_error')) {
+          message = 'Rate limit reached. Please wait a minute and try again.';
+        } else if (message.includes('authentication_error')) {
+          message = 'Invalid API key. Please check your ANTHROPIC_API_KEY configuration.';
+        }
         controller.enqueue(
           encoder.encode(JSON.stringify({ type: 'error', message }) + '\n')
         );
