@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { StrategyId, StrategyInputs } from '@/lib/types';
+import { PropertyData, StrategyId, StrategyInputs } from '@/lib/types';
 import { STRATEGIES, StrategyDefinition } from '@/lib/strategies';
 
 interface Props {
+  propertyData: PropertyData;
   onSubmit: (strategies: StrategyInputs[]) => void;
 }
 
@@ -157,8 +158,9 @@ function StrategyCard({
   );
 }
 
-export default function StrategySelector({ onSubmit }: Props) {
+export default function StrategySelector({ propertyData, onSubmit }: Props) {
   const [selected, setSelected] = useState<Set<StrategyId>>(new Set());
+  const [purchasePrice, setPurchasePrice] = useState<string>('');
   const [inputs, setInputs] = useState<Record<StrategyId, Record<string, string>>>(
     {} as Record<StrategyId, Record<string, string>>
   );
@@ -183,11 +185,13 @@ export default function StrategySelector({ onSubmit }: Props) {
   }
 
   function handleSubmit() {
+    const pp = purchasePrice ? Number(purchasePrice) : undefined;
     const strategies: StrategyInputs[] = Array.from(selected).map((id) => {
       const raw = inputs[id] ?? {};
       const num = (k: string) => (raw[k] ? Number(raw[k]) : undefined);
       return {
         strategyId: id,
+        purchasePrice: pp,
         renovationCost: num('renovationCost'),
         arvEstimate: num('arvEstimate'),
         targetRent: num('targetRent'),
@@ -221,6 +225,31 @@ export default function StrategySelector({ onSubmit }: Props) {
           Choose one or more strategies to analyze. Each will be evaluated independently — the same property can look
           very different across strategies.
         </p>
+      </div>
+
+      {/* Deal Terms */}
+      <div className="bg-gray-900 rounded-xl border border-gray-700 p-4">
+        <h3 className="text-gray-300 font-medium text-sm uppercase tracking-wider mb-3">Deal Terms</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1">List Price</label>
+            <div className="flex items-center bg-gray-800 rounded-lg border border-gray-700 px-3 py-2">
+              <span className="text-gray-500 text-sm mr-1">$</span>
+              <span className="text-gray-300 text-sm">
+                {propertyData.price != null
+                  ? propertyData.price.toLocaleString()
+                  : '—'}
+              </span>
+            </div>
+          </div>
+          <InputField
+            label="Purchase Price"
+            value={purchasePrice}
+            onChange={setPurchasePrice}
+            prefix="$"
+            placeholder={propertyData.price?.toString() ?? 'Enter offer price'}
+          />
+        </div>
       </div>
 
       <div>

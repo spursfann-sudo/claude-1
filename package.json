@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.0",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "next": "15.2.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

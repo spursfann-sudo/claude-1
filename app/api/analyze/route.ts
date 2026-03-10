@@ -168,6 +168,7 @@ IMPORTANT METRICS:
   - Fix & Flip: (Net Profit / Total Cash Invested) × (12 / Hold Months) — annualized, set cocIsAnnualized: true
   - Wholesale: (Assignment Fee / Earnest Money) × (12 / Hold Days×30) — annualized, set cocIsAnnualized: true
   - BRRRR: computed AFTER the cash-out refinance — Annual Cash Flow / Remaining Cash Invested Post-Refi
+- If a purchasePrice is provided in the strategy inputs, use it as the acquisition cost basis instead of the listing price. If not provided, fall back to the property's listing price.
 - totalCashInvested = actual cash out of pocket (not purchase price)
 - For hold strategies: assume down payment + closing costs (~3%) unless user specified
 - investmentScore: 1–10 (10 = exceptional deal under this strategy)

@@ -7,6 +7,7 @@ export interface PropertyData {
   bathrooms?: number;
   yearBuilt?: number;
   lotSize?: number;
+  lotSizeUnit?: 'sqft' | 'acres';
   hoaFees?: number;
   propertyTax?: number;
   neighborhoodName?: string;
@@ -28,6 +29,7 @@ export type StrategyId =
 
 export interface StrategyInputs {
   strategyId: StrategyId;
+  purchasePrice?: number;
   renovationCost?: number;
   arvEstimate?: number;
   targetRent?: number;
