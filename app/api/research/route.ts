@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { MODEL } from '@/lib/claude';
+import { RESEARCH_MODEL } from '@/lib/claude';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 4 });
 
   const systemPrompt = `You are a real estate research assistant. Your job is to gather factual property data about a given address using web search.
 Search for: listing price or estimated value, property details (beds/baths/sqft/year built/lot size), HOA fees, annual property tax, neighborhood name, walk score, school ratings, estimated monthly rent, median area home price, and recent price history.
@@ -57,9 +57,8 @@ Use null for any field you could not find data for. The researchSummary should b
     async start(controller) {
       try {
         const response = client.messages.stream({
-          model: MODEL,
-          max_tokens: 16000,
-          thinking: { type: 'enabled', budget_tokens: 10000 },
+          model: RESEARCH_MODEL,
+          max_tokens: 4096,
           system: systemPrompt,
           messages: [
             {
@@ -123,8 +122,13 @@ Use null for any field you could not find data for. The researchSummary should b
         }
       } catch (err) {
         console.error('[research] Stream error:', err);
-        const message =
+        let message =
           err instanceof Error ? err.message : 'Unknown error during research';
+        if (message.includes('rate_limit_error')) {
+          message = 'Rate limit reached. Please wait a minute and try again.';
+        } else if (message.includes('authentication_error')) {
+          message = 'Invalid API key. Please check your ANTHROPIC_API_KEY configuration.';
+        }
         controller.enqueue(
           encoder.encode(JSON.stringify({ type: 'error', message }) + '\n')
         );
