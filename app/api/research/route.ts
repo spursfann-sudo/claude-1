@@ -5,13 +5,6 @@ import { MODEL } from '@/lib/claude';
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
-// Minimal event shape we need from the stream
-interface StreamEvent {
-  type: string;
-  content_block?: { type: string; name?: string };
-  delta?: { type: string; text?: string };
-}
-
 export async function POST(req: NextRequest) {
   let address: string;
   try {
@@ -63,12 +56,10 @@ Use null for any field you could not find data for. The researchSummary should b
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Use unknown cast: adaptive thinking + web_search_20260209 are newer
-        // API features not yet fully typed in @anthropic-ai/sdk 0.55.x
-        const params = {
+        const response = client.messages.stream({
           model: MODEL,
-          max_tokens: 4096,
-          thinking: { type: 'adaptive' },
+          max_tokens: 16000,
+          thinking: { type: 'enabled', budget_tokens: 10000 },
           system: systemPrompt,
           messages: [
             {
@@ -76,12 +67,8 @@ Use null for any field you could not find data for. The researchSummary should b
               content: `Research this property address and return the JSON data: ${address}`,
             },
           ],
-          tools: [{ type: 'web_search_20260209' }],
-        };
-
-        const response = (client.messages as unknown as {
-          stream: (p: unknown) => AsyncIterable<StreamEvent>;
-        }).stream(params);
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        });
 
         let fullText = '';
 
@@ -99,7 +86,7 @@ Use null for any field you could not find data for. The researchSummary should b
             );
           } else if (
             event.type === 'content_block_start' &&
-            event.content_block?.type === 'tool_use'
+            event.content_block?.type === 'server_tool_use'
           ) {
             controller.enqueue(
               encoder.encode(

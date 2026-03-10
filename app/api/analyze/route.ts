@@ -3,12 +3,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import { MODEL } from '@/lib/claude';
 import { PropertyData, StrategyInputs } from '@/lib/types';
 
-// Minimal event shape we need from the stream
-interface StreamEvent {
-  type: string;
-  delta?: { type: string; text?: string };
-}
-
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
@@ -180,7 +174,9 @@ IMPORTANT METRICS:
 - verdict: based on the numbers and market conditions
 - valueProjections: for hold strategies, provide year 1 through holdPeriodYears (or 10 if not specified)
 
-Use realistic, conservative assumptions. Be honest about weak deals. Include 3–5 risk factors per strategy.`;
+Use realistic, conservative assumptions. Be honest about weak deals. Include 3–5 risk factors per strategy.
+
+Output ONLY a valid JSON object matching the provided schema. No markdown, no explanation, just the JSON.`;
 
   const userMessage = `Property Data:
 ${JSON.stringify(propertyData, null, 2)}
@@ -188,31 +184,20 @@ ${JSON.stringify(propertyData, null, 2)}
 Strategies to analyze:
 ${JSON.stringify(strategies, null, 2)}
 
-Analyze each strategy and return the complete JSON analysis.`;
+Analyze each strategy and return the complete JSON analysis matching this exact schema:
+${JSON.stringify(ANALYSIS_SCHEMA, null, 2)}`;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Use unknown cast: adaptive thinking + output_config.format are newer
-        // API features not yet fully typed in @anthropic-ai/sdk 0.55.x
-        const params = {
+        const response = client.messages.stream({
           model: MODEL,
-          max_tokens: 8192,
-          thinking: { type: 'adaptive' },
+          max_tokens: 16000,
+          thinking: { type: 'enabled', budget_tokens: 10000 },
           system: systemPrompt,
           messages: [{ role: 'user' as const, content: userMessage }],
-          output_config: {
-            format: {
-              type: 'json_schema',
-              json_schema: { name: 'RealEstateAnalysis', schema: ANALYSIS_SCHEMA },
-            },
-          },
-        };
-
-        const response = (client.messages as unknown as {
-          stream: (p: unknown) => AsyncIterable<StreamEvent>;
-        }).stream(params);
+        });
 
         let fullText = '';
 
@@ -228,7 +213,9 @@ Analyze each strategy and return the complete JSON analysis.`;
             );
           } else if (event.type === 'message_stop') {
             try {
-              const parsed = JSON.parse(fullText);
+              const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) throw new Error('No JSON found');
+              const parsed = JSON.parse(jsonMatch[0]);
               controller.enqueue(
                 encoder.encode(JSON.stringify({ type: 'result', data: parsed }) + '\n')
               );
